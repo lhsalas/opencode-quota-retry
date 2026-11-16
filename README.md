@@ -1,0 +1,102 @@
+# OpenCode Quota Retry
+
+An OpenCode plugin that waits for OpenAI usage-limit errors to clear, then continues affected sessions. It supports the
+OpenCode TUI and Desktop app.
+
+## What it does
+
+- Detects OpenAI provider rate-limit/quota errors from the OpenCode retry hook.
+- Queues affected sessions and makes one continuation probe every 30 minutes by default.
+- Tries at most 10 delayed retries in one quota-limit cycle. The original failed request is not included in that count.
+- Sends a continuation in the same session rather than replaying the original prompt.
+- Notifies on each failed probe, on recovery, and when the retry limit is exhausted.
+- Keeps pending session IDs locally so the next time the TUI or Desktop app becomes active it can probe immediately.
+- Cancels the in-memory wait when the last UI client disconnects. It does not persist a wait deadline or retry count.
+
+OpenCode does not expose the reset time for an OpenAI subscription through its usage-limits endpoint. A successful
+continuation request is therefore the signal that the provider is accepting requests again.
+
+## Install from source
+
+Requirements:
+
+- OpenCode 2.3 or later.
+- Node.js 22.12 or later and npm.
+
+Clone the repository, install dependencies, and build the Desktop bundle:
+
+```sh
+git clone https://github.com/lhsalas/opencode-quota-retry.git
+cd opencode-quota-retry
+npm install
+npm run build
+```
+
+Add the local package to your existing `opencode.json` or `opencode.jsonc` without replacing other settings:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [
+    {
+      "package": "/absolute/path/to/opencode-quota-retry",
+      "options": {
+        "providerID": "openai",
+        "intervalMinutes": 30,
+        "maxRetries": 10
+      }
+    }
+  ]
+}
+```
+
+OpenCode loads the server plugin and Desktop GUI plugin from this entry. The CLI automatically loads the TUI part from a
+configured server plugin package.
+
+After changing the plugin's source, run `npm run build` again so Desktop uses the latest GUI bundle.
+
+## Notifications
+
+The plugin shows an in-app toast and requests a system notification when the UI is blurred.
+
+Examples:
+
+- “The OpenAI limit is active. Retry 1/10 is scheduled in 30 minutes.”
+- “The OpenAI limit is still active on retry 4/10. Retry 5/10 is scheduled in 30 minutes.”
+- “The OpenAI limit accepted a request on retry 5/10. Work is continuing.”
+- “The OpenAI limit is still active after 10/10 retries. Close and reopen OpenCode to try again.”
+
+Desktop system notifications follow OpenCode's **Settings → Notifications** preferences. Retry status and session IDs
+stay in OpenCode's local runtime; provider response bodies and credentials are not stored or published.
+
+## Process and retry behavior
+
+- Retry count is per active run. Closing all UI clients cancels the timer and resets the count.
+- Pending session IDs remain in OpenCode's local plugin storage. On the next TUI/Desktop activation, the plugin attempts
+  an immediate continuation; if still limited, it starts a new 30-minute wait.
+- The TUI and Desktop plugin send a heartbeat every 15 seconds. A graceful close unregisters immediately; a lost client
+  is treated as inactive after 45 seconds.
+- With multiple sessions, one provider probe runs at a time. Other affected sessions wait in a local queue.
+- A successful probe resumes queued sessions one at a time. A later quota failure starts a new cooldown cycle.
+- The plugin only automatically retries matching provider limit errors. Other provider errors stop the retry for that
+  session and show an error notification.
+
+The GUI extension point is currently experimental in OpenCode. See the [GUI plugin guide](https://opencode.ai/docs/build/plugins/gui),
+[TUI plugin guide](https://opencode.ai/docs/build/plugins/cli), and [server plugin guide](https://opencode.ai/docs/build/plugins/server).
+The server also uses OpenCode's experimental session-wait API to avoid queuing a continuation behind work already running
+in that session.
+
+## Development
+
+```sh
+npm test
+npm run typecheck
+npm run build
+```
+
+Tests use simulated failures and fake timers; they do not make OpenAI requests or require credentials.
+
+## Privacy
+
+This repository contains no account credentials, API keys, session transcripts, provider error bodies, or personal
+configuration. The runtime stores pending session IDs only in OpenCode's local plugin storage.
