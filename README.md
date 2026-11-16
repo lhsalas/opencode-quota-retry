@@ -16,6 +16,65 @@ OpenCode TUI and Desktop app.
 OpenCode does not expose the reset time for an OpenAI subscription through its usage-limits endpoint. A successful
 continuation request is therefore the signal that the provider is accepting requests again.
 
+## Install with OpenCode Agent
+
+Paste this prompt into an OpenCode Agent to install the plugin for both TUI and Desktop. It asks the Agent to use a
+global OpenCode config so the plugin is available across projects.
+
+```text
+Install OpenCode Quota Retry from:
+https://github.com/lhsalas/opencode-quota-retry
+
+Goal: enable it for both OpenCode TUI and Desktop on this machine.
+
+Safety:
+- Do not read, print, copy, or upload API keys, credentials, session transcripts,
+  provider response bodies, or other secrets.
+- Do not make real OpenAI requests, edit the current project, or commit or push
+  changes.
+- Do not modify source files in the cloned plugin repository; only install its
+  dependencies and build the generated Desktop bundle.
+- Preserve all existing OpenCode settings. If the config cannot be safely updated,
+  stop and ask me before changing it.
+- Do not upgrade or install Node.js or OpenCode globally without asking.
+
+Steps:
+1. Check that OpenCode is 2.3 or later and Node.js is 22.12 or later.
+2. Clone the public repo into a stable user-local directory. If it already exists,
+   update it only with a fast-forward pull when its Git working tree is clean.
+   If it has local changes, leave it untouched and ask me what to do.
+3. In the clone, run `npm ci`, `npm test`, and `npm run build`. These checks must
+   not make provider requests.
+4. Add this plugin entry to the `plugins` array in the global `opencode.json`
+   or `opencode.jsonc`, preserving every other setting. If no global config
+   exists, create it using this structure:
+
+   {
+     "$schema": "https://opencode.ai/config.json",
+     "plugins": [
+       {
+         "package": "<absolute path to the clone>",
+         "options": {
+           "providerID": "openai",
+           "intervalMinutes": 30,
+           "maxRetries": 10
+         }
+       }
+     ]
+   }
+
+5. Use one global plugin entry for both surfaces. Do not add a duplicate TUI
+   entry to `cli.json`; OpenCode loads the TUI part from the configured package.
+6. Reload or reopen OpenCode if needed. Verify the plugin loads and tell me
+   whether Desktop system notifications need to be enabled in Settings.
+
+Report only the install path, the config key added, and test results. Do not
+include secrets or the full config contents in your report.
+```
+
+The prompt uses the public repository and does not need GitHub authentication or an OpenAI API key. OpenCode uses the
+provider credentials already configured on the user's machine.
+
 ## Install from source
 
 Requirements:
