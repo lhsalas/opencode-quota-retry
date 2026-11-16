@@ -6,3 +6,6 @@ coverage/
 !.env.example
 .DS_Store
 *.log
+
+# Local learning notes; intentionally kept out of the public repository.
+.docs/
