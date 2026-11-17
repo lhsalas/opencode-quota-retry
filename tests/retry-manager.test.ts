@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { RetryManager, type RetryManagerDriver, type RetryManagerStorage } from "../src/retry-manager.js"
+import {
+  CONTINUATION_TEXT,
+  RetryManager,
+  type RetryManagerDriver,
+  type RetryManagerStorage,
+} from "../src/retry-manager.js"
 import type { RetryNotice } from "../src/rpc.js"
 
 const INTERVAL_MS = 30 * 60_000
@@ -59,6 +64,10 @@ describe("RetryManager", () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it("uses the minimal continuation prompt", () => {
+    expect(CONTINUATION_TEXT).toBe("Continue")
   })
 
   it("waits 30 minutes before the first retry and reports the retry number", async () => {

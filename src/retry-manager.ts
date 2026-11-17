@@ -38,11 +38,7 @@ interface InFlightAttempt {
 
 interface PreparingAttempt extends InFlightAttempt {}
 
-export const CONTINUATION_TEXT = [
-  "Continue the interrupted task from the current session context.",
-  "First inspect the current workspace and recent tool results to determine what already completed.",
-  "Do not repeat completed or externally visible actions. Continue only the remaining work.",
-].join(" ")
+export const CONTINUATION_TEXT = "Continue"
 
 export interface RetryManagerClock {
   now(): number
